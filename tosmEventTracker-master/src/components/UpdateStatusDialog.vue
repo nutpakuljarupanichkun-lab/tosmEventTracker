@@ -4,13 +4,13 @@
   <el-dialog
     :model-value="modelValue"
     @update:modelValue="$emit('update:modelValue', $event)"
-    title="更新狀態"
+    title="อัปเดตสถานะ"
     width="400px"
     :show-close="false"
     :close-on-click-modal="true"
     align-center
   >
-  <span style="font-size: large;">{{showName }}</span>
+    <span style="font-size: large;">{{ showName }}</span>
     <div
       style="
         display: flex;
@@ -23,14 +23,14 @@
       <el-input
         v-if="featureFlags?.nosec"
         v-model="newCdTimeInput"
-        placeholder="時.分 + enter"
+        placeholder="ชม.นาที + enter"
         style="width: 230px"
         @keyup.enter="handleCustomCd"
       />
       <el-input
         v-else
         v-model="newCdTimeInput"
-        placeholder="時.分.秒 + enter"
+        placeholder="ชม.นาที.วินาที + enter"
         style="width: 230px"
         @keyup.enter="handleCustomCd"
       />
@@ -39,11 +39,11 @@
         @click="handleCustomCd"
         style="width: 60px; margin-left: 5px"
       >
-        更新CD
+        อัปเดต CD
       </el-button>
     </div>
 
-    <!-- 階段 -->
+    <!-- ขั้น -->
     <div
       style="
         width: 300px;
@@ -58,10 +58,11 @@
         style="text-align: center; margin-bottom: 5px"
       >
         <el-button @click="handleSelection(`stage_${i}`)" style="width: 70px">
-          階段 {{ i }}/{{ currentNote?.maxStages || 4 }}
+          ขั้น {{ i }}/{{ currentNote?.maxStages || 4 }}
         </el-button>
       </div>
     </div>
+
     <!-- ON -->
     <div :span="24" style="text-align: center; margin-bottom: 10px">
       <el-button
@@ -132,7 +133,7 @@ const handleCustomCd = () => {
   let respawnTime: number | null = null;
 
   if (!timeStr) {
-    ElMessage.error("請輸入時間！");
+    ElMessage.error("กรุณาใส่เวลา!");
     return;
   }
 
@@ -148,28 +149,24 @@ const handleCustomCd = () => {
       totalSeconds =
         timeParts[0] * 3600 + timeParts[1] * 60 + (timeParts[2] || 0);
     } else {
-      // nosec?
-      ElMessage.error("時間格式錯誤，請使用 mm:ss 或 hh:mm:ss");
+      ElMessage.error("รูปแบบเวลาไม่ถูกต้อง กรุณาใช้ นาที:วินาที หรือ ชม:นาที:วินาที");
       return;
     }
     respawnTime = Date.now() + totalSeconds * 1000;
   } else if (!isNaN(parseInt(timeStr))) {
-    // 【修正】這裡的邏輯現在與您的原始程式碼完全相同
     const minutes = parseInt(timeStr);
     respawnTime = Date.now() + minutes * 60 * 1000;
   } else {
-    ElMessage.error("時間格式錯誤，請輸入有效數字或時間格式");
+    ElMessage.error("รูปแบบเวลาไม่ถูกต้อง กรุณาใส่ตัวเลขหรือรูปแบบเวลา");
     return;
   }
 
   if (respawnTime === null) {
-    ElMessage.error("無法解析時間");
+    ElMessage.error("ไม่สามารถอ่านค่าเวลาได้");
     return;
   }
 
   emit("update:modelValue", false);
-
-  // 【修正】直接發出時間戳給 App.vue
   emit("update-note-cd", props.currentNote?.id, respawnTime);
 };
 </script>
