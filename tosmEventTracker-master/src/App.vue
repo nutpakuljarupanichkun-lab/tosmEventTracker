@@ -677,6 +677,8 @@ onMounted(() => {
 });
 
 watch(notes, saveNotes, { deep: true });
+};
+
 </script>
 
 <style scoped>
