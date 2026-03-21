@@ -291,23 +291,6 @@ const loadNotes = () => {
       }
     }
   });
-};
-      const mapData = maps.value.find(
-        (m: MapData) => m.level === note.mapLevel && m.name === note.noteText
-      );
-      if (mapData) {
-        return {
-          ...note,
-          isStarred: mapData.isStarred,
-          noteText: mapData.name,
-          maxStages: mapData.maxStages,
-          imagePath: (note as any).imagePath || mapData.imagePath,
-        };
-      }
-      return note;
-    });
-  }
-};
 
 const saveNotes = () => {
   localStorage.setItem("notes", JSON.stringify(notes.value));
