@@ -269,11 +269,29 @@ const loadNotes = () => {
         }
         return note;
       });
+    } else {
+      // ถ้า Firebase ไม่มีข้อมูล ให้โหลดจาก localStorage แทน
+      const savedNotes = localStorage.getItem("notes");
+      if (savedNotes) {
+        notes.value = JSON.parse(savedNotes).map((note: Note) => {
+          const mapData = maps.value.find(
+            (m: MapData) => m.level === note.mapLevel && m.name === note.noteText
+          );
+          if (mapData) {
+            return {
+              ...note,
+              isStarred: mapData.isStarred,
+              noteText: mapData.name,
+              maxStages: mapData.maxStages,
+              imagePath: (note as any).imagePath || mapData.imagePath,
+            };
+          }
+          return note;
+        });
+      }
     }
   });
-  const savedNotes = localStorage.getItem("notes");
-  if (savedNotes) {
-    notes.value = JSON.parse(savedNotes).map((note: Note) => {
+};
       const mapData = maps.value.find(
         (m: MapData) => m.level === note.mapLevel && m.name === note.noteText
       );
