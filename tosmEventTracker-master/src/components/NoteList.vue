@@ -1,6 +1,6 @@
 <template>
   <el-card>
-    <div v-if="notes.length === 0" class="no-notes-message">沒有任何記錄。</div>
+    <div v-if="notes.length === 0" class="no-notes-message">ยังไม่มีข้อมูลใดๆ</div>
     <div v-else>
       <div class="list-actions">
         <el-button @click="sortNotes">
@@ -18,15 +18,15 @@
           @click="handleClearAll"
           :disabled="notes.length === 0"
         >
-          一鍵清除
+          ลบทั้งหมด
         </el-button>
       </div>
       <el-row class="list-header" :gutter="10">
         <el-col :span="1" :xs="0"></el-col>
-        <el-col :span="3">區域</el-col>
-        <el-col :span="7" :xs="6">地圖</el-col>
+        <el-col :span="3">EP</el-col>
+        <el-col :span="7" :xs="6">แผนที่</el-col>
         <el-col :span="3">
-          分流
+          ช่อง
           <el-button
             v-if="!isXs"
             size="small"
@@ -36,12 +36,12 @@
           />
         </el-col>
         <el-col :span="6" :xs="9">
-          狀態
+          สถานะ
           <el-button size="small" type="" @click="toggleTimeDisplay">
-            切換CD時間
+            สลับเวลา CD
           </el-button>
         </el-col>
-        <el-col :span="4" :xs="3">操作</el-col>
+        <el-col :span="4" :xs="3">จัดการ</el-col>
       </el-row>
 
       <transition-group name="list-item" tag="div">
@@ -78,24 +78,21 @@
                 <template #reference>
                   <span v-if="featureFlags?.en">
                     Lv.{{ note.mapLevel }}
-                    {{
-                      getMapEnName(note.noteText || getMapName(note.mapLevel))
-                    }}
+                    {{ getMapEnName(note.noteText || getMapName(note.mapLevel)) }}
                   </span>
                   <span v-else>
                     Lv.{{ note.mapLevel }}
                     {{ note.noteText || getMapName(note.mapLevel) }}
                   </span>
                 </template>
-
                 <template #default>
                   <img
                     v-if="mapImageCache[note.noteText]"
                     :src="mapImageCache[note.noteText]"
-                    alt="地圖圖片"
+                    alt="รูปแผนที่"
                     class="popover-map-image"
                   />
-                  <span v-else>無地圖圖片</span>
+                  <span v-else>ไม่มีรูปแผนที่</span>
                 </template>
               </el-popover>
               <span v-else>
@@ -132,30 +129,19 @@
           </el-col>
           <el-col :span="6" :xs="9">
             <span v-if="note.state === 'CD' && note.respawnTime <= currentTime">
-              <el-button
-                type="warning"
-                size="small"
-                @click="handleExpiredClick(note)"
-                >{{ getStatusText(note) }}</el-button
-              >
+              <el-button type="warning" size="small" @click="handleExpiredClick(note)">
+                {{ getStatusText(note) }}
+              </el-button>
             </span>
             <span v-else-if="note.state.startsWith('STAGE_')">
-              <el-button
-                plain
-                type="primary"
-                size="small"
-                @click="handleExpiredClick(note)"
-                >{{ getStatusText(note) }}</el-button
-              >
+              <el-button plain type="primary" size="small" @click="handleExpiredClick(note)">
+                {{ getStatusText(note) }}
+              </el-button>
             </span>
             <span v-else-if="note.state === 'ON'">
-              <el-button
-                plain
-                type="info"
-                size="small"
-                @click="handleExpiredClick(note)"
-                >{{ getStatusText(note) }}</el-button
-              >
+              <el-button plain type="info" size="small" @click="handleExpiredClick(note)">
+                {{ getStatusText(note) }}
+              </el-button>
             </span>
             <span v-else @click="handleExpiredClick(note)">
               {{ getStatusText(note) }}
@@ -168,7 +154,7 @@
               size="small"
               @click="handleDelete(note.id)"
             >
-              刪除
+              ลบ
             </el-button>
             <el-button
               v-else
@@ -208,13 +194,13 @@ import {
   Delete,
 } from "@element-plus/icons-vue";
 
-const featureFlags = inject<Ref<{ pic: boolean,en: boolean }>>("feature-flags");
+const featureFlags = inject<Ref<{ pic: boolean; en: boolean }>>("feature-flags");
 
 const props = defineProps<{
   notes: Note[];
   currentSortMode: "time" | "map";
   maps: MapData[];
-  mapImageCache: Record<string, string>; // 接收圖片快取
+  mapImageCache: Record<string, string>;
 }>();
 
 const emit = defineEmits([
@@ -227,7 +213,7 @@ const emit = defineEmits([
   "update-map-star",
   "show-update-dialog",
 ]);
-// --------------------- 響應式邏輯 ---------------------
+
 const isXs = ref(false);
 
 const checkXs = () => {
@@ -242,8 +228,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("resize", checkXs);
 });
-
-// ----------------------------------------------------
 
 const currentTime = ref(Date.now());
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -276,7 +260,7 @@ const channelAdjust = (note: Note, delta: number) => {
     }
   } else {
     ElMessage({
-      message: "分流已是最小，無法再減少",
+      message: "ช่องน้อยที่สุดแล้ว ไม่สามารถลดได้อีก",
       type: "warning",
     });
   }
@@ -284,11 +268,9 @@ const channelAdjust = (note: Note, delta: number) => {
 
 const toggleHightlight = (on: boolean, target: number = 0) => {
   for (const note of props.notes) {
-    // 編輯分流時提示所有相同地圖
     if (on && note.mapLevel == target) {
       note.isHighlight = on;
     }
-    // 結束編輯分流時關閉提示
     if (note.isHighlight) {
       note.isHighlight = on;
     }
@@ -300,7 +282,7 @@ const toggleHightlight = (on: boolean, target: number = 0) => {
 
 const getMapName = (level: number) => {
   const map = props.maps.find((m) => m.level === level);
-  return map ? map.name : "未知地圖";
+  return map ? map.name : "ไม่พบแผนที่";
 };
 
 const getMapEnName = (name: string) => {
@@ -313,20 +295,16 @@ const speakNoteDetails = (note: Note) => {
     const mapName = note.noteText || getMapName(note.mapLevel);
     const utterance = new SpeechSynthesisUtterance();
 
-    utterance.text = `E P ${getEpisode(note.mapLevel)}, ${mapName} 分流 ${
-      note.channel
-    }, CD已結束`;
-    utterance.lang = "zh-TW";
-
     if (featureFlags?.value.en) {
       const mapEnName = getMapEnName(mapName);
       utterance.text = `Episode ${getEpisode(note.mapLevel)}, ${mapEnName} channel ${note.channel}, Cooldown is finished`;
       utterance.lang = "en-US";
+    } else {
+      utterance.text = `EP ${getEpisode(note.mapLevel)}, ${mapName} ช่อง ${note.channel}, CD หมดแล้ว`;
+      utterance.lang = "th-TH";
     }
 
     window.speechSynthesis.speak(utterance);
-  } else {
-    console.error("瀏覽器不支持語音合成 API。");
   }
 };
 
@@ -339,13 +317,12 @@ const checkAndPlaySound = () => {
       !note.hasAlerted &&
       note.respawnTime <= now
     ) {
-      // 重開網頁時 CD到期三分鐘內的分流 才語音提醒?
       if (now - note.respawnTime < 3 * 60 * 1000) {
         speakNoteDetails(note);
       } else {
         let msg = `EP.${getEpisode(note.mapLevel)} ${
           note.noteText || getMapName(note.mapLevel)
-        } CH.${note.channel} CD已結束`;
+        } CH.${note.channel} CD หมดแล้ว`;
         ElMessage({ type: "warning", message: msg });
       }
       note.hasAlerted = true;
@@ -355,18 +332,17 @@ const checkAndPlaySound = () => {
 
 const sortButtonText = computed(() => {
   if (props.currentSortMode === "time") {
-    return "依地圖排序";
+    return "เรียงตามแผนที่";
   } else {
-    return "依時間排序";
+    return "เรียงตามเวลา";
   }
 });
 
 const toggleAllSoundButtonText = computed(() => {
-  return isAllSoundOn.value ? "提示聲全關" : "提示聲全開";
+  return isAllSoundOn.value ? "ปิดเสียงทั้งหมด" : "เปิดเสียงทั้งหมด";
 });
 
 const handleExpiredClick = (note: Note) => {
-  // 不再使用 ElMessageBox，直接發出事件
   emit("show-update-dialog", note.id);
 };
 
@@ -379,17 +355,13 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (timer) {
-    clearInterval(timer);
-  }
-  if (soundChecker) {
-    clearInterval(soundChecker);
-  }
+  if (timer) clearInterval(timer);
+  if (soundChecker) clearInterval(soundChecker);
 });
 
 const getEpisode = (level: number) => {
   const map = props.maps.find((m) => m.level === level);
-  return map ? map.episode : "未知";
+  return map ? map.episode : "?";
 };
 
 const formatTime = (seconds: number) => {
@@ -397,13 +369,7 @@ const formatTime = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
-
-  // note: 即使nosec也要顯示秒數 因為會出現00:00(分)的倒數
-
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-    2,
-    "0"
-  )}:${String(remainingSeconds).padStart(2, "0")}`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 };
 
 const getStatusText = (note: Note) => {
@@ -411,30 +377,29 @@ const getStatusText = (note: Note) => {
 
   if (note.state === "ON") {
     const elapsedSeconds = Math.floor((now - (note.onTime || now)) / 1000);
-    return `ON 已出現 ${formatTime(elapsedSeconds)}+`;
+    return `ON ผ่านมา ${formatTime(elapsedSeconds)}+`;
   } else if (note.state.startsWith("STAGE_")) {
     const stage = note.state.replace("STAGE_", "");
     if (note.stageTime) {
       const elapsedSeconds = Math.floor((now - (note.stageTime || now)) / 1000);
-      return `${stage} 階段 ${formatTime(elapsedSeconds)}+ `;
+      return `ขั้น ${stage} ${formatTime(elapsedSeconds)}+`;
     } else {
-      return `階段 ${stage} / ${note.maxStages}`;
+      return `ขั้น ${stage} / ${note.maxStages}`;
     }
   } else if (note.state === "CD") {
     const diffInSeconds = Math.floor((note.respawnTime - now) / 1000);
     if (diffInSeconds > 0) {
       if (showLocalTime.value) {
-        const localTime = new Date(note.respawnTime || 0).toLocaleTimeString(
-          "zh-TW",
-          { hour12: false }
-        );
-        return `開始於 ${localTime}`;
+        const localTime = new Date(note.respawnTime || 0).toLocaleTimeString("th-TH", { hour12: false });
+        return `เริ่มเมื่อ ${localTime}`;
       } else {
-        return featureFlags?.value.en?`Cooldown ${formatTime(diffInSeconds)}`:`CD時間 ${formatTime(diffInSeconds)}`;
+        return featureFlags?.value.en
+          ? `Cooldown ${formatTime(diffInSeconds)}`
+          : `CD ${formatTime(diffInSeconds)}`;
       }
     } else {
       const elapsedSeconds = Math.abs(diffInSeconds);
-      return `CD已過 ${formatTime(elapsedSeconds)}`;
+      return `CD หมดแล้ว ${formatTime(elapsedSeconds)}`;
     }
   }
   return "";
@@ -479,23 +444,23 @@ const handleDelete = (id: string) => {
 const handleClearAll = async () => {
   try {
     await ElMessageBox.confirm(
-      "確定要清空所有記錄嗎？此操作無法復原。",
-      "警告",
+      "ต้องการลบข้อมูลทั้งหมดใช่ไหม? ไม่สามารถย้อนกลับได้",
+      "คำเตือน",
       {
-        confirmButtonText: "確定",
-        cancelButtonText: "取消",
+        confirmButtonText: "ยืนยัน",
+        cancelButtonText: "ยกเลิก",
         type: "warning",
       }
     );
     emit("clear-notes");
     ElMessage({
       type: "success",
-      message: "所有記錄已清空",
+      message: "ลบข้อมูลทั้งหมดแล้ว",
     });
   } catch (err) {
     ElMessage({
       type: "info",
-      message: "已取消清空",
+      message: "ยกเลิกการลบ",
     });
   }
 };
@@ -522,7 +487,6 @@ const handleClearAll = async () => {
   padding: 10px 0;
   transition: transform 0.5s ease, opacity 0.5s ease, background-color 0.5s ease;
 }
-
 .list-item-enter-from {
   opacity: 0;
   transform: translateY(-20px);
@@ -541,43 +505,34 @@ const handleClearAll = async () => {
 .list-item-move {
   transition: transform 0.5s ease;
 }
-
 .over-time-limit {
   color: #909399;
 }
-
 .warning-row {
   background-color: var(--el-color-danger-light-8) !important;
   border-left: 5px solid var(--el-color-danger);
 }
-
 .highlight-row {
   background-color: var(--cus-highlight-row) !important;
 }
-
 .map-name-content {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-
 .star-icon {
   font-size: 1.2em;
   cursor: pointer;
   color: #c0c4cc;
 }
-
 .star-icon.is-starred {
   color: #f5c723;
 }
-
 .sound-icon {
   font-size: 1.2em;
   cursor: pointer;
 }
-
 .popover-map-image {
-  /* max-width: 100%; */
   max-width: 400px;
   height: auto;
   border-radius: 4px;
