@@ -71,12 +71,12 @@
   </el-container>
   <a
     v-if="featureFlags?.en"
-    href="https://github.com/xlisyuan/tosmEventTracker/issues"
+    href="https://github.com/xlisyuan"
     target="_blank"
     rel="noopener noreferrer"
     title="github"
   >
-    Lis Taiwan
+    Thank You Credit : xlisyuan
   </a>
   <a
     v-else
