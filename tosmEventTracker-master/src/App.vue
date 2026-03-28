@@ -194,6 +194,7 @@ const loadMapImage = async (noteText: string) => {
 };
 
 const notes = ref<Note[]>([]);
+let isSaving = false;
 const currentSortMode = ref<"time" | "map">("time");
 const ON_TIME_LIMIT_MS = 30 * 60 * 1000;
 const hasInputSoundOn = ref(true);
@@ -225,7 +226,7 @@ const toggleSort = () => {
 const loadNotes = () => {
   const roomId = new URLSearchParams(window.location.search).get("room") || "default";
   onValue(dbRef(db, `rooms/${roomId}/notes`), (snapshot) => {
-    if (snapshot.exists()) {
+    if (snapshot.exists() && !isSaving) {
       const data = snapshot.val();
       notes.value = JSON.parse(data).map((note: Note) => {
         const mapData = maps.value.find(
@@ -260,9 +261,12 @@ const loadNotes = () => {
 };
 
 const saveNotes = () => {
+  isSaving = true;
   localStorage.setItem("notes", JSON.stringify(notes.value));
   const roomId = new URLSearchParams(window.location.search).get("room") || "default";
-  set(dbRef(db, `rooms/${roomId}/notes`), JSON.stringify(notes.value));
+  set(dbRef(db, `rooms/${roomId}/notes`), JSON.stringify(notes.value)).then(() => {
+    setTimeout(() => { isSaving = false; }, 500);
+  });
 };
 
 const handleAddNewNote = async (newNote: any) => {
