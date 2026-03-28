@@ -2,11 +2,11 @@
   <el-card>
     <el-form class="input-form" @submit.prevent>
       <div class="input-form-left">
-        <el-form-item label="地圖 分流 時間or狀態">
+        <el-form-item label="แผนที่ ช่อง เวลา/สถานะ">
           <el-input
             v-if="featureFlags?.nosec"
             v-model="inputContent"
-            placeholder="e.g., 83 2 1.35"
+            placeholder="เช่น 83 2 1.35"
             @keyup.enter="handleAdd"
             @focus="isInputFocused = true"
             @blur="isInputFocused = false"
@@ -14,7 +14,7 @@
           <el-input
             v-else
             v-model="inputContent"
-            placeholder="e.g., 83 2 1.35.45"
+            placeholder="เช่น 83 2 1.35.45"
             @keyup.enter="handleAdd"
             @focus="isInputFocused = true"
             @blur="isInputFocused = false"
@@ -33,10 +33,10 @@
           ></div>
         </el-form-item>
         <el-form-item>
-          <el-checkbox v-model="hasSound" label="提示聲" />
+          <el-checkbox v-model="hasSound" label="เสียงแจ้งเตือน" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleAdd">新增</el-button>
+          <el-button type="primary" @click="handleAdd">เพิ่ม</el-button>
         </el-form-item>
       </div>
       <div class="input-form-right">
@@ -54,7 +54,7 @@
           v-if="!selectedEpisode && !isStarSelection"
           class="episode-selection"
         >
-          <h4>請選擇章節：</h4>
+          <h4>เลือก EP:</h4>
           <div class="episode-buttons">
             <el-button
               :type="isStarSelection ? 'warning' : ''"
@@ -74,11 +74,11 @@
 
         <div v-else class="map-level-selection">
           <h4>
-            <template v-if="isStarSelection">收藏的地圖：</template>
-            <template v-else>EP{{ selectedEpisode }} 地圖：</template>
+            <template v-if="isStarSelection">แผนที่โปรด:</template>
+            <template v-else>EP{{ selectedEpisode }} แผนที่:</template>
           </h4>
           <div class="map-level-buttons">
-            <el-button @click="handleEpisodeSelection(0)">{{featureFlags?.en?'↩':'回上頁'}}</el-button>
+            <el-button @click="handleEpisodeSelection(0)">{{ featureFlags?.en ? '↩' : '↩ กลับ' }}</el-button>
             <el-button
               v-for="map in filteredMaps"
               :key="map.level + (map.isStarred ? 'star' : '')"
@@ -102,7 +102,7 @@
       </div>
 
       <div v-if="hasValidMapLevel" class="channel-selection">
-        <h4>請選擇分流：</h4>
+        <h4>เลือกช่อง:</h4>
         <div class="channel-buttons">
           <el-button
             v-for="channel in 10"
@@ -120,7 +120,7 @@
       </div>
 
       <div v-if="isChannelConfirmed" class="state-selection">
-        <h4>請選擇狀態或輸入時間：</h4>
+        <h4>เลือกสถานะหรือใส่เวลา:</h4>
         <div class="state-buttons">
           <el-button
             v-for="stage in selectedMapMaxStages"
@@ -136,14 +136,14 @@
           <el-input
             v-if="featureFlags?.nosec"
             v-model="timeInput"
-            placeholder="e.g., 1.10 或 25"
+            placeholder="เช่น 1.10 หรือ 25"
             style="width: 150px"
             @keyup.enter="handleAdd"
           />
           <el-input
             v-else
             v-model="timeInput"
-            placeholder="e.g., 1:10:05 或 25.10"
+            placeholder="เช่น 1:10:05 หรือ 25.10"
             style="width: 150px"
             @keyup.enter="handleAdd"
           />
@@ -154,7 +154,7 @@
           @click="handleAdd"
           class="add-button-bottom"
         >
-          新增
+          เพิ่ม
         </el-button>
       </div>
     </div>
@@ -177,7 +177,7 @@ import { ArrowUp, ArrowDown, StarFilled } from "@element-plus/icons-vue";
 import type { Note, NoteState } from "@/types/Note";
 import type { MapData } from "@/data/maps";
 
-const featureFlags = inject<Ref<{ nosec: boolean, en:boolean }>>("feature-flags");
+const featureFlags = inject<Ref<{ nosec: boolean, en: boolean }>>("feature-flags");
 
 const props = defineProps({
   hasSound: Boolean,
@@ -203,17 +203,18 @@ watch(
 );
 
 const hintText = ref(`
-  <strong>支援格式</strong>: 地圖等級 (空格) 分流 (空格) CD時間或狀態<br>
-  <strong>CD時間</strong>: <code>1.30.7</code> (時.分.秒) 或 <code>25.10</code> (分.秒) 或 <code>5</code> (分)<br>
-  <strong>狀態</strong>: 階段 <code>1/4</code> 到 <code>3/4</code> 或 <code>ON</code><br>
-  輸入完可以直接enter
+  <strong>รูปแบบที่รองรับ</strong>: ระดับแผนที่ (เว้นวรรค) ช่อง (เว้นวรรค) เวลา CD หรือสถานะ<br>
+  <strong>เวลา CD</strong>: <code>1.30.7</code> (ชม.นาที.วินาที) หรือ <code>25.10</code> (นาที.วินาที) หรือ <code>5</code> (นาที)<br>
+  <strong>สถานะ</strong>: ขั้น <code>1/4</code> ถึง <code>3/4</code> หรือ <code>ON</code><br>
+  กด Enter เพื่อเพิ่มได้เลย
 `);
 
-const hintTextNosec =
-  ref(`<strong>支援格式</strong>: 地圖等級 (空格) 分流 (空格) CD時間或狀態<br>
-  <strong>CD時間</strong>: <code>1.35</code> (時.分) 或 <code>5</code> (分)<br>
-  <strong>狀態</strong>: 階段 <code>1/4</code> 到 <code>3/4</code> 或 <code>ON</code><br>
-  輸入完可以直接enter`);
+const hintTextNosec = ref(`
+  <strong>รูปแบบที่รองรับ</strong>: ระดับแผนที่ (เว้นวรรค) ช่อง (เว้นวรรค) เวลา CD หรือสถานะ<br>
+  <strong>เวลา CD</strong>: <code>1.35</code> (ชม.นาที) หรือ <code>5</code> (นาที)<br>
+  <strong>สถานะ</strong>: ขั้น <code>1/4</code> ถึง <code>3/4</code> หรือ <code>ON</code><br>
+  กด Enter เพื่อเพิ่มได้เลย
+`);
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value;
@@ -251,24 +252,19 @@ const parseInput = (value: string) => {
 
   if (parts.length === 0) return result;
 
-  // 第一部分：解析地圖等級
   result.mapLevel = parseInt(parts[0]);
   if (isNaN(result.mapLevel)) return result;
 
-  // 第二部分：判斷是地圖名稱還是分流
   if (parts.length > 1) {
     const potentialMapName = parts[1];
-    // 檢查是否有地圖同時符合等級和名稱
     const isMapName = props.maps!.some(
       (m) =>
         (m as any).level === result.mapLevel &&
         (m as any).name.trim() === potentialMapName
     );
 
-    // 如果是地圖名稱
     if (isMapName) {
       result.mapName = potentialMapName;
-      // 繼續解析分流與時間
       if (parts.length > 2) {
         result.channel = parseInt(parts[2]);
         if (parts.length > 3) {
@@ -276,9 +272,7 @@ const parseInput = (value: string) => {
         }
       }
     } else {
-      // 否則，將其視為分流
       result.channel = parseInt(potentialMapName);
-      // 繼續解析時間
       if (parts.length > 2) {
         result.timeStr = parts[2];
       }
@@ -365,7 +359,7 @@ const changeChannel = (delta: number) => {
     fillChannel(newChannel);
   } else {
     ElMessage({
-      message: "分流已是最小，無法再減少",
+      message: "ช่องน้อยที่สุดแล้ว ไม่สามารถลดได้อีก",
       type: "warning",
     });
   }
@@ -384,7 +378,7 @@ const handleAdd = async () => {
   const finalTimeStr = parsed.timeStr || timeInput.value.trim();
 
   if (!parsed.mapLevel || !parsed.channel || !finalTimeStr) {
-    ElMessage.error("輸入格式錯誤");
+    ElMessage.error("รูปแบบที่ป้อนไม่ถูกต้อง");
     return;
   }
 
@@ -418,7 +412,7 @@ const handleAdd = async () => {
       maxStages = max;
       stageTime = Date.now();
     } else {
-      ElMessage.error("階段格式錯誤");
+      ElMessage.error("รูปแบบขั้นไม่ถูกต้อง");
       return;
     }
   } else if (finalTimeStr.includes(".") || finalTimeStr.includes(":")) {
@@ -438,7 +432,7 @@ const handleAdd = async () => {
     const minutes = parseInt(finalTimeStr);
     respawnTime = Date.now() + minutes * 60 * 1000;
   } else {
-    ElMessage.error("時間或階段格式錯誤");
+    ElMessage.error("รูปแบบเวลาหรือขั้นไม่ถูกต้อง");
     return;
   }
 
@@ -495,7 +489,7 @@ const getMapData = async (mapLevel: number) => {
           )
         );
 
-        ElMessageBox.alert(message, "地圖選擇", {
+        ElMessageBox.alert(message, "เลือกแผนที่", {
           showConfirmButton: false,
           callback: (action: string) => {
             if (action === "cancel") {
@@ -508,7 +502,7 @@ const getMapData = async (mapLevel: number) => {
       map = matchingMaps.find((m) => m.name === selectedMapName) as MapData;
     } catch (action) {
       if (action === "cancel") {
-        ElMessage.info("已取消新增");
+        ElMessage.info("ยกเลิกการเพิ่ม");
       }
       return;
     }
@@ -517,7 +511,7 @@ const getMapData = async (mapLevel: number) => {
   }
 
   if (!map) {
-    ElMessage.error("找不到對應的地圖");
+    ElMessage.error("ไม่พบแผนที่ที่ตรงกัน");
     return;
   }
 
@@ -597,7 +591,6 @@ h4 {
 .add-button-bottom {
   margin-top: 10px;
 }
-
 .input-hint {
   position: absolute;
   top: 100%;
@@ -618,14 +611,12 @@ h4 {
 .input-hint br {
   margin: 5px 0;
 }
-
 .map-button-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
 }
-
 .star-icon {
   font-size: 1.5em;
   padding: 5px;
@@ -633,7 +624,6 @@ h4 {
   cursor: pointer;
   color: #c0c4cc;
 }
-
 .star-icon.is-starred {
   color: #f5c723;
 }
