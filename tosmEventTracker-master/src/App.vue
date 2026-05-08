@@ -265,7 +265,7 @@ const saveNotes = () => {
   localStorage.setItem("notes", JSON.stringify(notes.value));
   const roomId = new URLSearchParams(window.location.search).get("room") || "default";
   set(dbRef(db, `rooms/${roomId}/notes`), JSON.stringify(notes.value)).then(() => {
-    setTimeout(() => { isSaving = false; }, 500);
+    setTimeout(() => { isSaving = false; }, 1000);
   });
 };
 
@@ -542,6 +542,12 @@ onMounted(() => {
 
   console.log(`เวอร์ชัน: v${packageInfo.version}`);
 });
+
+watch(notes, (newVal) => {
+  if (!isSaving) {
+    saveNotes();
+  }
+}, { deep: true });
 
 </script>
 
