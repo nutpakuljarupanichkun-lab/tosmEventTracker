@@ -226,7 +226,23 @@ const toggleSort = () => {
 const loadNotes = () => {
   const roomId = new URLSearchParams(window.location.search).get("room") || "default";
   onValue(dbRef(db, `rooms/${roomId}/notes`), (snapshot) => {
-    if (snapshot.exists() && !isSaving) {
+    if (isSaving) return; // ถ้ากำลัง save อยู่ ไม่ต้องทำอะไร
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      notes.value = JSON.parse(data).map((note: Note) => {
+        const mapData = maps.value.find(
+          (m: MapData) => m.level === note.mapLevel && m.name === note.noteText
+        );
+        if (mapData) {
+          return { ...note, isStarred: mapData.isStarred, noteText: mapData.name, maxStages: mapData.maxStages };
+        }
+        return note;
+      });
+    }
+    // ถ้า Firebase ไม่มีข้อมูล ไม่ต้องโหลด localStorage เพราะจะทำให้ข้อมูลหาย
+  });
+};
       const data = snapshot.val();
       notes.value = JSON.parse(data).map((note: Note) => {
         const mapData = maps.value.find(
