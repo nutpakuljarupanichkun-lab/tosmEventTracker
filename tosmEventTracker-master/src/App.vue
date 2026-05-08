@@ -1,3 +1,4 @@
+
 <template>
   <el-container class="app-container">
     <el-header class="app-header">
@@ -94,11 +95,7 @@ import { ref, onMounted, watch, h, provide } from "vue";
 import { db } from "./firebase";
 import { ref as dbRef, onValue, set } from "firebase/database";
 
-const featureFlags = ref({
-  nosec: false,
-  pic: false,
-  en: false,
-});
+const featureFlags = ref({ nosec: false, pic: false, en: false });
 provide("feature-flags", featureFlags);
 
 import { v4 as uuidv4 } from "uuid";
@@ -112,7 +109,6 @@ import packageInfo from "../package.json";
 import { Sunny, Moon } from "@element-plus/icons-vue";
 
 const isDark = ref(false);
-
 watch(isDark, (newValue) => {
   if (newValue) {
     document.documentElement.classList.add("dark");
@@ -139,9 +135,7 @@ const mapMigrations: ((mapsData: MapData[]) => MapData[])[] = [
     const correctTiraMap = originalMaps.find((map) => map.name === "堤拉修道院");
     if (!correctTiraMap) throw new Error("Missing correct map data for V0→V1 migration.");
     return mapsData.map((map) =>
-      map.name === "提拉修道院"
-        ? { ...map, name: correctTiraMap.name, imagePath: correctTiraMap.imagePath }
-        : map
+      map.name === "提拉修道院" ? { ...map, name: correctTiraMap.name, imagePath: correctTiraMap.imagePath } : map
     );
   },
   (mapsData) => {
@@ -169,7 +163,6 @@ try {
 } catch (error) {
   migrationSuccess = false;
 }
-
 if (migrationSuccess) localStorage.setItem("mapVersion", mapMigrations.length.toString());
 localStorage.setItem("mapData", JSON.stringify(mapsData));
 
@@ -194,7 +187,8 @@ const loadMapImage = async (noteText: string) => {
 };
 
 const notes = ref<Note[]>([]);
-let isSaving = false;
+// isLoading = true ตอนที่ Firebase กำลังอัปเดต notes ป้องกัน watch ส่งข้อมูลกลับ
+let isLoading = false;
 const currentSortMode = ref<"time" | "map">("time");
 const ON_TIME_LIMIT_MS = 30 * 60 * 1000;
 const hasInputSoundOn = ref(true);
@@ -202,6 +196,39 @@ const importExportData = ref("");
 const showUpdateDialog = ref(false);
 const currentNoteToUpdate = ref<Note | null>(null);
 const updateMapName = ref("");
+
+const getRoomId = () => new URLSearchParams(window.location.search).get("room") || "default";
+
+const saveNotes = () => {
+  localStorage.setItem("notes", JSON.stringify(notes.value));
+  set(dbRef(db, `rooms/${getRoomId()}/notes`), JSON.stringify(notes.value));
+};
+
+const loadNotes = () => {
+  onValue(dbRef(db, `rooms/${getRoomId()}/notes`), (snapshot) => {
+    if (!snapshot.exists()) return;
+    isLoading = true;
+    const data = snapshot.val();
+    notes.value = JSON.parse(data).map((note: Note) => {
+      const mapData = maps.value.find(
+        (m: MapData) => m.level === note.mapLevel && m.name === note.noteText
+      );
+      if (mapData) {
+        return { ...note, isStarred: mapData.isStarred, noteText: mapData.name, maxStages: mapData.maxStages };
+      }
+      return note;
+    });
+    // หลังจาก Vue อัปเดต DOM เสร็จ ค่อย reset isLoading
+    setTimeout(() => { isLoading = false; }, 100);
+  });
+};
+
+// watch notes — ถ้า isLoading อยู่ แปลว่า Firebase เป็นคนอัปเดต ไม่ต้อง save กลับ
+watch(notes, () => {
+  if (!isLoading) {
+    saveNotes();
+  }
+}, { deep: true });
 
 const handleShowUpdateDialog = (noteId: string) => {
   const note = notes.value.find((n) => n.id === noteId);
@@ -223,44 +250,9 @@ const toggleSort = () => {
   notes.value.sort(sortNotesArray);
 };
 
-const loadNotes = () => {
-  const roomId = new URLSearchParams(window.location.search).get("room") || "default";
-  onValue(dbRef(db, `rooms/${roomId}/notes`), (snapshot) => {
-    if (isSaving) return;
-    
-    if (snapshot.exists()) {
-      const data = snapshot.val();
-      notes.value = JSON.parse(data).map((note: Note) => {
-        const mapData = maps.value.find(
-          (m: MapData) => m.level === note.mapLevel && m.name === note.noteText
-        );
-        if (mapData) {
-          return { ...note, isStarred: mapData.isStarred, noteText: mapData.name, maxStages: mapData.maxStages };
-        }
-        return note;
-      });
-      hasLoaded = true; // ← ย้ายมาไว้ตรงนี้
-    }
-  });
-};
-
-const saveNotes = () => {
-  if (!hasLoaded) return;
-  
-  isSaving = true;
-  const roomId = new URLSearchParams(window.location.search).get("room") || "default";
-  localStorage.setItem("notes", JSON.stringify(notes.value));
-  set(dbRef(db, `rooms/${roomId}/notes`), JSON.stringify(notes.value)).then(() => {
-    setTimeout(() => { isSaving = false; }, 1000);
-  });
-};
-
 const handleAddNewNote = async (newNote: any) => {
   const mapData = maps.value.find((m: MapData) => m.name === newNote.noteText);
-  if (!mapData) {
-    ElMessage.error("ไม่พบข้อมูลแผนที่");
-    return;
-  }
+  if (!mapData) { ElMessage.error("ไม่พบข้อมูลแผนที่"); return; }
   await loadMapImage(mapData.name);
   const finalNote = {
     ...newNote,
@@ -271,11 +263,7 @@ const handleAddNewNote = async (newNote: any) => {
     maxStages: mapData.maxStages,
   };
   notes.value.forEach((note) => {
-    if (note.mapLevel === finalNote.mapLevel && note.noteText === finalNote.noteText && note.channel === finalNote.channel) {
-      note.isWarning = true;
-    } else {
-      note.isWarning = false;
-    }
+    note.isWarning = (note.mapLevel === finalNote.mapLevel && note.noteText === finalNote.noteText && note.channel === finalNote.channel);
   });
   notes.value.unshift(finalNote);
   notes.value.sort(sortNotesArray);
@@ -307,28 +295,21 @@ const sortNotesArray = (a: Note, b: Note): number => {
   const now = Date.now();
   const aStateCategory = getNoteStateCategory(a.state);
   const bStateCategory = getNoteStateCategory(b.state);
-
   if (currentSortMode.value === "map") {
     if (a.mapLevel !== b.mapLevel) return b.mapLevel - a.mapLevel;
     if (a.channel !== b.channel) return a.channel - b.channel;
   }
-
   const aIsOnOverLimit = aStateCategory === "ON" && now - (a.onTime || now) > ON_TIME_LIMIT_MS;
   const bIsOnOverLimit = bStateCategory === "ON" && now - (b.onTime || now) > ON_TIME_LIMIT_MS;
-
   if (aIsOnOverLimit && !bIsOnOverLimit) return 1;
   if (!aIsOnOverLimit && bIsOnOverLimit) return -1;
-
   const stateOrder = { ON: 1, STAGE: 2, CD: 3 };
   if (stateOrder[aStateCategory as keyof typeof stateOrder] !== stateOrder[bStateCategory as keyof typeof stateOrder]) {
     return stateOrder[aStateCategory as keyof typeof stateOrder] - stateOrder[bStateCategory as keyof typeof stateOrder];
   }
-
   if (aStateCategory === "ON") return (a.onTime || 0) - (b.onTime || 0);
   else if (aStateCategory === "STAGE") {
-    const aStage = parseInt(a.state.replace("STAGE_", ""), 10);
-    const bStage = parseInt(b.state.replace("STAGE_", ""), 10);
-    return bStage - aStage;
+    return parseInt(b.state.replace("STAGE_", ""), 10) - parseInt(a.state.replace("STAGE_", ""), 10);
   } else if (aStateCategory === "CD") {
     return (a.respawnTime || 0) - (b.respawnTime || 0);
   }
@@ -349,16 +330,12 @@ const handleUpdateNoteStatus = (id: string, newState: NoteState, newTime: number
     noteToUpdate.stageTime = null;
     noteToUpdate.hasAlerted = false;
     switch (newState) {
-      case "ON":
-        noteToUpdate.onTime = newTime;
-        break;
+      case "ON": noteToUpdate.onTime = newTime; break;
       case "CD":
         const map = maps.value.find((m: MapData) => m.level === noteToUpdate.mapLevel);
         if (map) noteToUpdate.respawnTime = Date.now() + map.respawnTime * 1000;
         break;
-      default:
-        noteToUpdate.stageTime = newTime;
-        break;
+      default: noteToUpdate.stageTime = newTime; break;
     }
     notes.value.sort(sortNotesArray);
   }
@@ -378,9 +355,7 @@ const handleUpdateNoteCd = (id: string, respawnTime: number) => {
   }
 };
 
-const handleToggleInputSound = (state: boolean) => {
-  hasInputSoundOn.value = state;
-};
+const handleToggleInputSound = (state: boolean) => { hasInputSoundOn.value = state; };
 
 const handleUpdateMapStar = (mapLevel: number) => {
   const map = maps.value.find((m: MapData) => m.level === mapLevel);
@@ -392,12 +367,8 @@ const handleUpdateMapStar = (mapLevel: number) => {
 
 const exportNotes = async () => {
   const exportedNotes = notes.value.map((note) => ({
-    l: note.mapLevel,
-    c: note.channel,
-    o: note.onTime,
-    r: note.respawnTime,
-    s: note.state,
-    n: (note as any).noteText,
+    l: note.mapLevel, c: note.channel, o: note.onTime,
+    r: note.respawnTime, s: note.state, n: (note as any).noteText,
   }));
   importExportData.value = JSON.stringify(exportedNotes);
   try {
@@ -419,22 +390,18 @@ const handleImportClick = async () => {
       ElMessage({ type: "error", message: "รูปแบบข้อมูลไม่ถูกต้อง" });
       return;
     }
-    const processedImportedNotes = importedNotes
-      .map((importedNote) => {
-        const mapLevel = importedNote.l || importedNote.mapLevel;
-        const channel = importedNote.c || importedNote.channel;
-        const onTime = importedNote.o || importedNote.onTime;
-        const respawnTime = importedNote.r || importedNote.respawnTime;
-        const state = importedNote.s || importedNote.state;
-        const noteText = importedNote.n || importedNote.noteText;
-        if (!mapLevel || !noteText) return null;
-        return { ...importedNote, mapLevel, channel, onTime, respawnTime, state, noteText };
-      })
-      .filter((n) => n !== null);
+    const processedImportedNotes = importedNotes.map((importedNote) => {
+      const mapLevel = importedNote.l || importedNote.mapLevel;
+      const channel = importedNote.c || importedNote.channel;
+      const onTime = importedNote.o || importedNote.onTime;
+      const respawnTime = importedNote.r || importedNote.respawnTime;
+      const state = importedNote.s || importedNote.state;
+      const noteText = importedNote.n || importedNote.noteText;
+      if (!mapLevel || !noteText) return null;
+      return { ...importedNote, mapLevel, channel, onTime, respawnTime, state, noteText };
+    }).filter((n) => n !== null);
 
-    for (const note of processedImportedNotes) {
-      await loadMapImage(note.noteText);
-    }
+    for (const note of processedImportedNotes) { await loadMapImage(note.noteText); }
 
     const currentNotesMap = new Map(notes.value.map((note) => [`${note.mapLevel}-${note.channel}-${note.noteText}`, note]));
     const nonDuplicateNotes: Note[] = [];
@@ -444,22 +411,14 @@ const handleImportClick = async () => {
       const mapData = maps.value.find((m: MapData) => m.level === importedNote.mapLevel && m.name === importedNote.noteText);
       const isExpired = importedNote.respawnTime <= Date.now();
       const processedNote: Note = {
-        ...importedNote,
-        id: uuidv4(),
-        hasSound: hasInputSoundOn.value,
+        ...importedNote, id: uuidv4(), hasSound: hasInputSoundOn.value,
         isStarred: mapData ? mapData.isStarred : false,
-        onTime: importedNote.onTime || null,
-        respawnTime: importedNote.respawnTime || null,
-        hasAlerted: isExpired,
-        maxStages: mapData ? mapData.maxStages : 0,
+        onTime: importedNote.onTime || null, respawnTime: importedNote.respawnTime || null,
+        hasAlerted: isExpired, maxStages: mapData ? mapData.maxStages : 0,
       };
-      const existingKey = `${importedNote.mapLevel}-${importedNote.channel}-${importedNote.noteText}`;
-      const existingNote = currentNotesMap.get(existingKey);
-      if (existingNote) {
-        duplicateNotes.push({ newNote: processedNote, oldNote: existingNote });
-      } else {
-        nonDuplicateNotes.push(processedNote);
-      }
+      const existingNote = currentNotesMap.get(`${importedNote.mapLevel}-${importedNote.channel}-${importedNote.noteText}`);
+      if (existingNote) { duplicateNotes.push({ newNote: processedNote, oldNote: existingNote }); }
+      else { nonDuplicateNotes.push(processedNote); }
     });
 
     if (duplicateNotes.length > 0) {
@@ -472,29 +431,23 @@ const handleImportClick = async () => {
           ),
           h("p", "ต้องการจัดการข้อมูลซ้ำอย่างไร?"),
         ]),
-        showCancelButton: true,
-        confirmButtonText: "เขียนทับทั้งหมด",
-        cancelButtonText: "ข้ามทั้งหมด",
-        distinguishCancelAndClose: true,
-      })
-        .then((action) => {
-          if (action === "confirm") {
-            const finalNotesMap = new Map(notes.value.map((note) => [`${note.mapLevel}-${note.channel}-${note.noteText}`, note]));
-            duplicateNotes.forEach((item) => finalNotesMap.set(`${item.newNote.mapLevel}-${item.newNote.channel}-${item.newNote.noteText}`, item.newNote));
-            notes.value = [...finalNotesMap.values(), ...nonDuplicateNotes];
-            notes.value.sort(sortNotesArray);
-            saveNotes();
-            ElMessage({ type: "success", message: `เขียนทับ ${duplicateNotes.length} รายการ และเพิ่ม ${nonDuplicateNotes.length} รายการสำเร็จ` });
-          } else if (action === "cancel") {
-            notes.value = [...notes.value, ...nonDuplicateNotes];
-            notes.value.sort(sortNotesArray);
-            saveNotes();
-            ElMessage({ type: "success", message: `เพิ่ม ${nonDuplicateNotes.length} รายการสำเร็จ` });
-          }
-        })
-        .catch(() => {
-          ElMessage({ type: "info", message: "ยกเลิกการนำเข้า" });
-        });
+        showCancelButton: true, confirmButtonText: "เขียนทับทั้งหมด",
+        cancelButtonText: "ข้ามทั้งหมด", distinguishCancelAndClose: true,
+      }).then((action) => {
+        if (action === "confirm") {
+          const finalNotesMap = new Map(notes.value.map((note) => [`${note.mapLevel}-${note.channel}-${note.noteText}`, note]));
+          duplicateNotes.forEach((item) => finalNotesMap.set(`${item.newNote.mapLevel}-${item.newNote.channel}-${item.newNote.noteText}`, item.newNote));
+          notes.value = [...finalNotesMap.values(), ...nonDuplicateNotes];
+          notes.value.sort(sortNotesArray);
+          saveNotes();
+          ElMessage({ type: "success", message: `เขียนทับ ${duplicateNotes.length} รายการ และเพิ่ม ${nonDuplicateNotes.length} รายการสำเร็จ` });
+        } else if (action === "cancel") {
+          notes.value = [...notes.value, ...nonDuplicateNotes];
+          notes.value.sort(sortNotesArray);
+          saveNotes();
+          ElMessage({ type: "success", message: `เพิ่ม ${nonDuplicateNotes.length} รายการสำเร็จ` });
+        }
+      }).catch(() => { ElMessage({ type: "info", message: "ยกเลิกการนำเข้า" }); });
     } else {
       notes.value = [...notes.value, ...nonDuplicateNotes];
       notes.value.sort(sortNotesArray);
@@ -508,33 +461,15 @@ const handleImportClick = async () => {
 
 onMounted(() => {
   const savedTheme = localStorage.getItem("theme");
-  isDark.value =
-    savedTheme === "dark" ||
-    (savedTheme === null && window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-  if (isDark.value) {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
+  isDark.value = savedTheme === "dark" || (savedTheme === null && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  if (isDark.value) document.documentElement.classList.add("dark");
+  else document.documentElement.classList.remove("dark");
 
   loadNotes();
 
-  if (notes.value.length > 0) {
-    notes.value.forEach((note) => { loadMapImage(note.noteText); });
-  }
-
   setInterval(() => { notes.value.sort(sortNotesArray); }, 1000);
-
   console.log(`เวอร์ชัน: v${packageInfo.version}`);
 });
-
-watch(notes, (newVal) => {
-  if (!isSaving) {
-    saveNotes();
-  }
-}, { deep: true });
-
 </script>
 
 <style scoped>
@@ -545,40 +480,12 @@ watch(notes, (newVal) => {
   background-color: var(--app-container-color);
   min-height: 100vh;
 }
-.app-header {
-  height: auto;
-  text-align: center;
-  padding: 5px;
-}
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.header-right {
-  display: flex;
-  align-items: center;
-}
-.dark-mode-switch {
-  --el-switch-on-color: #0e2d5a;
-  --el-switch-off-color: #eba523;
-}
-.app-main {
-  padding: 0;
-}
-.list-card-container {
-  margin-top: 20px;
-}
-.import-export-section {
-  margin-top: 20px;
-  padding: 20px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-}
-.import-export-buttons {
-  display: flex;
-  justify-content: flex-start;
-  gap: 10px;
-  margin-bottom: 10px;
-}
+.app-header { height: auto; text-align: center; padding: 5px; }
+.header-content { display: flex; justify-content: space-between; align-items: center; }
+.header-right { display: flex; align-items: center; }
+.dark-mode-switch { --el-switch-on-color: #0e2d5a; --el-switch-off-color: #eba523; }
+.app-main { padding: 0; }
+.list-card-container { margin-top: 20px; }
+.import-export-section { margin-top: 20px; padding: 20px; border: 1px solid #dcdfe6; border-radius: 4px; }
+.import-export-buttons { display: flex; justify-content: flex-start; gap: 10px; margin-bottom: 10px; }
 </style>
