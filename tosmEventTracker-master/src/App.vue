@@ -239,14 +239,17 @@ const loadNotes = () => {
         }
         return note;
       });
+      hasLoaded = true; // ← ย้ายมาไว้ตรงนี้
     }
   });
 };
 
 const saveNotes = () => {
+  if (!hasLoaded) return;
+  
   isSaving = true;
-  localStorage.setItem("notes", JSON.stringify(notes.value));
   const roomId = new URLSearchParams(window.location.search).get("room") || "default";
+  localStorage.setItem("notes", JSON.stringify(notes.value));
   set(dbRef(db, `rooms/${roomId}/notes`), JSON.stringify(notes.value)).then(() => {
     setTimeout(() => { isSaving = false; }, 1000);
   });
