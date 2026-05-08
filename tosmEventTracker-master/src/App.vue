@@ -543,7 +543,6 @@ onMounted(() => {
   console.log(`เวอร์ชัน: v${packageInfo.version}`);
 });
 
-watch(notes, saveNotes, { deep: true });
 </script>
 
 <style scoped>
